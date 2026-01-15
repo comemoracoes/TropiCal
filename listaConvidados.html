@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Lista de Convidados</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+
+      background-image: url("BG_RSVP.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        background-image: url("BG_RSVP_mobile_left_1080x1920.png");
+      }
+    }
+
+    .card {
+      width: 100%;
+      max-width: 900px;
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(8px);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    h1 {
+      text-align: center;
+      color: #e49b3b;
+      margin-bottom: 16px;
+    }
+
+    /* CONTADORES */
+    .stats {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .stat.yes {
+      background-color: #d4f4dd;
+      color: #1b7a3a;
+    }
+
+    .stat.no {
+      background-color: #fde0e0;
+      color: #a12a2a;
+    }
+
+    .filters {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filters input,
+    .filters select {
+      padding: 10px 14px;
+      border-radius: 20px;
+      border: 1px solid #ddd;
+      outline: none;
+      font-size: 14px;
+    }
+
+    @media (max-width: 600px) {
+      .filters {
+        flex-direction: column;
+      }
+
+      .filters input,
+      .filters select {
+        width: 100%;
+      }
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    thead {
+      background-color: #f4f4f4;
+    }
+
+    th, td {
+      padding: 12px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th {
+      font-weight: 600;
+      color: #555;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid #eee;
+    }
+
+    tbody tr:hover {
+      background-color: #fafafa;
+    }
+
+    .badge {
+      padding: 6px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      display: inline-block;
+    }
+
+    .badge.yes {
+      background-color: #d4f4dd;
+      color: #1b7a3a;
+    }
+
+    .badge.no {
+      background-color: #fde0e0;
+      color: #a12a2a;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h1>Lista de Convidados</h1>
+
+    <!-- CONTADORES -->
+    <div class="stats">
+      <div class="stat yes" id="totalConfirmados">
+        Confirmados: 0
+      </div>
+      <div class="stat no" id="totalNaoConfirmados">
+        Não confirmados: 0
+      </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filters">
+      <input
+        type="text"
+        id="filterName"
+        placeholder="Filtrar por nome"
+      />
+
+      <select id="filterPresence">
+        <option value="">Todas as presenças</option>
+        <option value="true">Confirmados</option>
+        <option value="false">Não confirmados</option>
+      </select>
+    </div>
+
+    <!-- TABELA -->
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>Presença</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API_URL =
+      "https://x8ki-letl-twmt.n7.xano.io/api:OK3wCbOW/aniversarioCarlos/get/convidados";
+
+    let convidados = [];
+
+    const tableBody = document.getElementById("tableBody");
+    const filterName = document.getElementById("filterName");
+    const filterPresence = document.getElementById("filterPresence");
+
+    const totalConfirmadosEl = document.getElementById("totalConfirmados");
+    const totalNaoConfirmadosEl = document.getElementById("totalNaoConfirmados");
+
+    async function carregarConvidados() {
+      try {
+        const response = await fetch(API_URL);
+        convidados = await response.json();
+        renderTabela();
+      } catch (error) {
+        console.error("Erro ao carregar convidados:", error);
+      }
+    }
+
+    function renderTabela() {
+      const nomeFiltro = filterName.value.toLowerCase();
+      const presencaFiltro = filterPresence.value;
+
+      tableBody.innerHTML = "";
+
+      let confirmados = 0;
+      let naoConfirmados = 0;
+
+      convidados
+        .filter(c => {
+          const matchNome =
+            c.nome.toLowerCase().includes(nomeFiltro);
+
+          const matchPresenca =
+            presencaFiltro === ""
+              ? true
+              : String(c.presenca) === presencaFiltro;
+
+          return matchNome && matchPresenca;
+        })
+        .sort((a, b) =>
+          a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" })
+        )
+        .forEach(c => {
+          if (c.presenca) {
+            confirmados++;
+          } else {
+            naoConfirmados++;
+          }
+
+          const tr = document.createElement("tr");
+
+          tr.innerHTML = `
+            <td>${c.nome}</td>
+            <td>
+              <span class="badge ${c.presenca ? "yes" : "no"}">
+                ${c.presenca ? "Confirmado" : "Não confirmado"}
+              </span>
+            </td>
+          `;
+
+          tableBody.appendChild(tr);
+        });
+
+      totalConfirmadosEl.textContent =
+        `Confirmados: ${confirmados}`;
+
+      totalNaoConfirmadosEl.textContent =
+        `Não confirmados: ${naoConfirmados}`;
+    }
+
+    filterName.addEventListener("input", renderTabela);
+    filterPresence.addEventListener("change", renderTabela);
+
+    carregarConvidados();
+  </script>
+
+</body>
+</html>
